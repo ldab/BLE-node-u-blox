@@ -41,6 +41,10 @@ https://github.com/ldab/BLE-Weather-Station-Cloud-Gateway
 
 Ref. https://devzone.nordicsemi.com/f/nordic-q-a/44638/how-to-move-an-sdk-example-out-of-the-sdk-tree
 
+## SHTC3 Low Power mode tradeoff
+
+<img src="./pics/shtc3_low_power_mode.png" alt="3D PCB" width="50%"> 
+
 ## PCB
 
 <img src="./pics/BLE-node.png" alt="3D PCB" width="50%"> 
