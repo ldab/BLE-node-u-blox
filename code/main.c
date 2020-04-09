@@ -26,6 +26,7 @@
 #include "nrf_log_default_backends.h"
 
 #include "shtc3.h"
+#include "saadc_register.h"
 
 static void sleep_handler(void)
 {
@@ -80,11 +81,21 @@ int main(void)
           float    humidity;    // relative humidity
           SHTC3_getID();
           SHTC3_GetTempAndHumiPolling(&temperature, &humidity);
-          NRF_LOG_INFO("Temp: " NRF_LOG_FLOAT_MARKER "�C and Hum: " NRF_LOG_FLOAT_MARKER "%%", NRF_LOG_FLOAT(temperature), NRF_LOG_FLOAT(humidity)); NRF_LOG_FLUSH();
+          NRF_LOG_INFO("Temp: " NRF_LOG_FLOAT_MARKER "degC and Hum: " NRF_LOG_FLOAT_MARKER "%%", NRF_LOG_FLOAT(temperature), NRF_LOG_FLOAT(humidity)); NRF_LOG_FLUSH();
           nrf_delay_ms(2000);
           NRF_LOG_INFO("Good night"); NRF_LOG_FLUSH();
           SHTC3_Sleep();
 
+    bsp_board_leds_off();
+
+    nrf_delay_ms(1000);
+
+    bsp_board_leds_on();
+
+    float batt = getBatt(); // TODO something is consuming 180uA here.
+    NRF_LOG_INFO("Batt: " NRF_LOG_FLOAT_MARKER "V", NRF_LOG_FLOAT(batt)); NRF_LOG_FLUSH();
+    
+    nrf_delay_ms(500);
     bsp_board_leds_off();
 
     while (true)
