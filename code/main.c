@@ -17,22 +17,15 @@
 #include "bsp.h"
 
 #include "app_timer.h"
-#include "app_error.h"
-#include "app_util_platform.h"
-
 #include "nrf_drv_clock.h"
-#include "nrf_drv_twi.h"
 #include "nrf_delay.h"
-//#include "nrf_drv_power.h"
+#include "nrf_drv_power.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-#include "twi.h"
-
-float temperature = -0.0;
-float humidity    = -0.0;
+#include "shtc3.h"
 
 static void sleep_handler(void)
 {
@@ -46,23 +39,58 @@ static void sleep_handler(void)
  */
 int main(void)
 {
-  APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-  NRF_LOG_DEFAULT_BACKENDS_INIT();
+    ret_code_t err_code = NRF_LOG_INIT(app_timer_cnt_get);
+    APP_ERROR_CHECK(err_code);
 
-  NRF_LOG_INFO("\r\nTWI sensor example started.");
-  NRF_LOG_FLUSH();
-  twi_init();       // Initiate TWI/I2C
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
 
-  while (true)
-  {
-      nrf_delay_ms(500);
+    bsp_board_init(BSP_INIT_LEDS);
 
-      do
-      {
-        __WFE();
-      }while (m_xfer_done == false);
+    nrf_gpio_cfg_input(BUTTON_2, NRF_GPIO_PIN_PULLUP);   // SW3, user button
+    //nrf_gpio_cfg_input(ARDUINO_A0_PIN,;                  // Battery ADC
+    
+    // Function starting the internal low-frequency clock LFCLK XTAL oscillator.
+    // (When SoftDevice is enabled the LFCLK is always running and this is not needed).
+    ret_code_t ret = nrf_drv_clock_init();
+    APP_ERROR_CHECK(ret);
+    nrf_drv_clock_lfclk_request(NULL);
 
-      SHTC3_get_temp_humi(&temperature, &humidity);
-      NRF_LOG_FLUSH();
-  }
+    ret = app_timer_init();
+    APP_ERROR_CHECK(ret);
+
+    static uint8_t welcome[] = "App started\r\n";
+
+    NRF_LOG_INFO("%s", welcome);
+    NRF_LOG_FLUSH();
+
+    uint8_t i = 0;
+
+    while( nrf_gpio_pin_read(BUTTON_2) )
+    {
+      NRF_LOG_INFO("Press the button, it is = %d", nrf_gpio_pin_read(BUTTON_2));NRF_LOG_FLUSH();
+      bsp_board_led_invert(i);
+      nrf_delay_ms(1000);
+      bsp_board_led_invert(i);
+      i++;
+      if(i>2) i = 0;
+    }
+
+          twi_init();
+          float    temperature; // temperature
+          float    humidity;    // relative humidity
+          SHTC3_getID();
+          SHTC3_GetTempAndHumiPolling(&temperature, &humidity);
+          NRF_LOG_INFO("Temp: " NRF_LOG_FLOAT_MARKER "�C and Hum: " NRF_LOG_FLOAT_MARKER "%%", NRF_LOG_FLOAT(temperature), NRF_LOG_FLOAT(humidity)); NRF_LOG_FLUSH();
+          nrf_delay_ms(2000);
+          NRF_LOG_INFO("Good night"); NRF_LOG_FLUSH();
+          SHTC3_Sleep();
+
+    bsp_board_leds_off();
+
+    while (true)
+    {
+        sleep_handler();
+        nrf_delay_ms(1000);
+        NRF_LOG_FLUSH();
+    }
 }

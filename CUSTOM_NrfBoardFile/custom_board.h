@@ -10,36 +10,32 @@ extern "C" {
 // In this file PIN25 is used as button SWITCH_1, if the GREEN led
 // should be used it is possible to defined that one instead.
 #define LEDS_NUMBER    3
-//#define LEDS_NUMBER    3
 
 #define LED_R          NRF_GPIO_PIN_MAP(0,13)   // RED -> ARDUINO_4_PIN
 #define LED_B          NRF_GPIO_PIN_MAP(1,00)   // BLUE
 #define LED_G          NRF_GPIO_PIN_MAP(0,25)   // GREEN
-//#define LED_G          NRF_GPIO_PIN_MAP(0,25)   // GREEN
 
 #define LEDS_ACTIVE_STATE 0
 
 #define LEDS_LIST { LED_R, LED_B, LED_G }
-//#define LEDS_LIST { LED_R, LED_B }
 
 #define LEDS_INV_MASK  LEDS_MASK
 
 #define BSP_LED_0      LED_R
 #define BSP_LED_1      LED_B
 #define BSP_LED_2      LED_G
-//#define BSP_LED_2      LED_G
 
-#define BUTTONS_NUMBER 2
+#define BUTTONS_NUMBER 1
 
-#define BUTTON_1       25  // SWITCH_1
-#define BUTTON_2       2   // SWITCH_2
+//#define BUTTON_1       25  // SWITCH_1
+#define BUTTON_2       NRF_GPIO_PIN_MAP(0, 2)   // SWITCH_2
 #define BUTTON_PULL    NRF_GPIO_PIN_PULLUP
 
 #define BUTTONS_ACTIVE_STATE 0
 
-#define BUTTONS_LIST { BUTTON_1, BUTTON_2 }
+#define BUTTONS_LIST { /*BUTTON_1,*/ BUTTON_2 }
 
-#define BSP_BUTTON_0   BUTTON_1
+//#define BSP_BUTTON_0   BUTTON_1
 #define BSP_BUTTON_1   BUTTON_2
 
 #define RX_PIN_NUMBER  NRF_GPIO_PIN_MAP(0,29)
