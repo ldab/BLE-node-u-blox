@@ -56,10 +56,10 @@ static ret_code_t SHTC3_CheckCrc(uint8_t rawData[])
 
   // verify checksum
   if(crc != rawData[2]) {
-    NRF_LOG_WARNING("CRC Failed"); NRF_LOG_FLUSH();
+    NRF_LOG_WARNING("CRC Failed"); //NRF_LOG_FLUSH();
     return 2;
   } else {
-    NRF_LOG_INFO("CRC Good"); NRF_LOG_FLUSH();
+    NRF_LOG_INFO("CRC Good"); //NRF_LOG_FLUSH();
     return 0;
   }
 }
@@ -114,7 +114,7 @@ void SHTC3_getID(void)
 
     uint16_t id = 0;
     err_code = SHTC3_Read2BytesAndCrc(&id);
-    NRF_LOG_INFO("ID is = %x", id); NRF_LOG_FLUSH();
+    NRF_LOG_INFO("ID is = %x", id); //NRF_LOG_FLUSH();
 }
 
 ret_code_t SHTC3_Sleep(void)
@@ -170,7 +170,7 @@ ret_code_t SHTC3_GetTempAndHumiPolling(float *temp, float *humi)
       rawValueHumi = (rx_data[3] << 8) | rx_data[4]; 
     }
 
-    NRF_LOG_INFO("rawTemp = %d, rawHum = %d", rawValueTemp, rawValueHumi); NRF_LOG_FLUSH();
+    NRF_LOG_INFO("rawTemp = %d, rawHum = %d", rawValueTemp, rawValueHumi); //NRF_LOG_FLUSH();
 
     // if no error, calculate temperature in degC and humidity in %RH
     if(err_code == 0)
@@ -239,7 +239,7 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
         default:
             break;
     }
-    NRF_LOG_FLUSH();
+    //NRF_LOG_FLUSH();
 }
 
 /**
@@ -253,7 +253,7 @@ void twi_init (void)
        .scl                = ARDUINO_SCL_PIN,
        .sda                = ARDUINO_SDA_PIN,
        .frequency          = NRF_DRV_TWI_FREQ_100K,
-       .interrupt_priority = APP_IRQ_PRIORITY_HIGH,
+       .interrupt_priority = APP_IRQ_PRIORITY_MID,
        .clear_bus_init     = false
     };
 

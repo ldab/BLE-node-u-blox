@@ -38,7 +38,6 @@
     </folder>
     <folder Name="libs">
       <file file_name="../../../libs/shtc3/shtc3.h" />
-      <file file_name="../../../libs/adc/shtc3.h" />
     </folder>
     <folder Name="nRF_Log">
       <file file_name="$(SDK)/components/libraries/log/src/nrf_log_backend_rtt.c" />
@@ -95,9 +94,9 @@
       <file file_name="$(SDK)/modules/nrfx/drivers/src/prs/nrfx_prs.c" />
       <file file_name="$(SDK)/modules/nrfx/drivers/src/nrfx_uart.c" />
       <file file_name="$(SDK)/modules/nrfx/drivers/src/nrfx_uarte.c" />
-      <file file_name="C:/Users/lbisp/Desktop/nRF5_SDK_16.0.0_98a08e2/modules/nrfx/drivers/src/nrfx_twi.c" />
-      <file file_name="C:/Users/lbisp/Desktop/nRF5_SDK_16.0.0_98a08e2/modules/nrfx/drivers/src/nrfx_twim.c" />
-      <file file_name="C:/Users/lbisp/Desktop/nRF5_SDK_16.0.0_98a08e2/integration/nrfx/legacy/nrf_drv_twi.c" />
+      <file file_name="$(SDK)/modules/nrfx/drivers/src/nrfx_twi.c" />
+      <file file_name="$(SDK)/modules/nrfx/drivers/src/nrfx_twim.c" />
+      <file file_name="$(SDK)/integration/nrfx/legacy/nrf_drv_twi.c" />
       <file file_name="$(SDK)/modules/nrfx/drivers/src/nrfx_saadc.c" />
     </folder>
     <folder Name="Board Support">
