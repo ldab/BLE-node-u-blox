@@ -326,6 +326,12 @@ static void adv_update_handler(void)
     {
       err_code = sd_ble_gap_adv_stop(m_adv_handle);
       APP_ERROR_CHECK(err_code);
+
+      // Start how long to run interval timer.
+      err_code = app_timer_start(m_run_timer_id,
+                               APP_TIMER_TICKS(15000),
+                               NULL);
+      APP_ERROR_CHECK(err_code);
     }
 
     // Build and set advertising data
@@ -737,12 +743,6 @@ int main(void)
     // Start update interval timer.
     err_code = app_timer_start(m_update_timer_id,
                                APP_TIMER_TICKS(ADC_UPDATE_MS),
-                               NULL);
-    APP_ERROR_CHECK(err_code);
-
-    // Start how long to run interval timer.
-    err_code = app_timer_start(m_run_timer_id,
-                               APP_TIMER_TICKS(15000),
                                NULL);
     APP_ERROR_CHECK(err_code);
 
