@@ -51,9 +51,9 @@
 
 #define DEAD_BEEF                       0xDEADBEEF                                    /**< Value used as error code on stack dump, can be used to identify stack location on stack unwind. */
 
-#define APP_ADV_DURATION                0//3000                                          /**< The advertising duration (30 seconds) in units of 10 milliseconds. */
-#define NON_CONNECTABLE_ADV_INTERVAL    MSEC_TO_UNITS(1000, UNIT_0_625_MS)             /**< The advertising interval for non-connectable advertisement (100 ms). This value can vary between 100ms to 10.24s). */
-#define BLE_TX_POWER                    4                                           /**< BLE TX POWER in dBm, values: -40dBm, -20dBm, -16dBm, -12dBm, -8dBm, -4dBm, 0dBm, +2dBm, +3dBm, +4dBm, +5dBm, +6dBm, +7dBm and +8dBm. */
+#define APP_ADV_DURATION                0//3000                                       /**< The advertising duration (30 seconds) in units of 10 milliseconds. */
+#define NON_CONNECTABLE_ADV_INTERVAL    MSEC_TO_UNITS(1000, UNIT_0_625_MS)            /**< The advertising interval for non-connectable advertisement (100 ms). This value can vary between 100ms to 10.24s). */
+#define BLE_TX_POWER                    4                                             /**< BLE TX POWER in dBm, values: -40dBm, -20dBm, -16dBm, -12dBm, -8dBm, -4dBm, 0dBm, +2dBm, +3dBm, +4dBm, +5dBm, +6dBm, +7dBm and +8dBm. */
 
 #define SLAVE_LATENCY                   0                                             /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)               /**< Connection supervisory timeout (4 seconds). */
@@ -90,17 +90,16 @@ static ble_gap_adv_params_t     m_adv_params;                                   
 static uint8_t                  m_char_value[APP_CFG_CHAR_LEN];                     /**< Value of the characteristic that will be sent as a notification to the central. */
 static ble_gatts_char_handles_t m_char_handles;                                     /**< Handles of local characteristic (as provided by the BLE stack).*/
 static uint16_t                 m_conn_handle = BLE_CONN_HANDLE_INVALID;            /**< Handle of the current connection (as provided by the BLE stack, is BLE_CONN_HANDLE_INVALID if not in a connection).*/
-
-static bool                     isBoot = true;
-static uint8_t m_adv_handle = BLE_GAP_ADV_SET_HANDLE_NOT_SET;                       /**< Advertising handle used to identify an advertising set. */
-static uint8_t m_enc_advdata[BLE_GAP_ADV_SET_DATA_SIZE_MAX];                        /**< Buffer for storing an encoded advertising set. */
+static uint8_t                  m_adv_handle  = BLE_GAP_ADV_SET_HANDLE_NOT_SET;     /**< Advertising handle used to identify an advertising set. */
+static uint8_t                  m_enc_advdata[BLE_GAP_ADV_SET_DATA_SIZE_MAX];       /**< Buffer for storing an encoded advertising set. */
 
 static void advertising_start(void);
 static void sleep_mode_enter(void * p_context);
 
 static nrf_saadc_value_t adc_buf;
 
-uint8_t percentage_batt_lvl = 255;
+uint8_t     percentage_batt_lvl = 255;
+static bool isBoot              = true;
 
 /**@brief Struct that contains pointers to the encoded advertising data. */
 static ble_gap_adv_data_t m_adv_data =
@@ -214,53 +213,12 @@ static void non_connectable_adv_init(void)
     // Initialize advertising parameters (used when starting advertising).
     memset(&m_adv_params, 0, sizeof(m_adv_params));
 
-    m_adv_params.properties.type = BLE_GAP_ADV_TYPE_NONCONNECTABLE_SCANNABLE_UNDIRECTED; // BLE_GAP_ADV_TYPE_CONNECTABLE_NONSCANNABLE_DIRECTED; //
+    m_adv_params.properties.type = BLE_GAP_ADV_TYPE_NONCONNECTABLE_SCANNABLE_UNDIRECTED;
     m_adv_params.duration        = APP_ADV_DURATION;
     m_adv_params.p_peer_addr     = NULL;
     m_adv_params.filter_policy   = BLE_GAP_ADV_FP_ANY;
     m_adv_params.interval        = NON_CONNECTABLE_ADV_INTERVAL;
     m_adv_params.primary_phy     = BLE_GAP_PHY_1MBPS;
-}
-
-
-/**@brief Function for initializing the Advertisement packet.
- *
- * @details This function initializes the data that is to be placed in an advertisement packet in
- *          both connectable and non-connectable modes.
- *
- */
-static void advertising_init(void)
-{
-    ret_code_t               err_code;
-    ble_advdata_t            advdata;
-    ble_advdata_manuf_data_t manuf_data;
-    uint8_t                  flags          = BLE_GAP_ADV_FLAGS_LE_ONLY_LIMITED_DISC_MODE;
-    int8_t                   tx_power_level = BLE_TX_POWER;
-
-    APP_ERROR_CHECK_BOOL(sizeof(flags) == 1);  // Assert that these two values of the same.
-
-    // Build and set advertising data
-    memset(&advdata, 0, sizeof(advdata));
-
-    manuf_data.company_identifier = COMPANY_IDENTIFIER;
-    manuf_data.data.size          = 10;                    
-    manuf_data.data.p_data        = "25@25@100";
-    //advdata.flags                 = flags;
-    advdata.p_manuf_specific_data = &manuf_data;
-    
-    advdata.name_type             = BLE_ADVDATA_NO_NAME;
-    advdata.p_tx_power_level      = &tx_power_level;
-    
-    //TODO more data via server response, refer to "ble_advertising_init_t".srdata.p_manuf_specific_data
-    //m_adv_data.scan_rsp_data.p_data = "more data";
-    //m_adv_data.scan_rsp_data.len    = 10;
-
-    err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
-    APP_ERROR_CHECK(err_code);
-
-
-    err_code = sd_ble_gap_adv_set_configure(&m_adv_handle, &m_adv_data, &m_adv_params);
-    APP_ERROR_CHECK(err_code);
 }
 
 /**@brief Function for handling the Notification timeout.
@@ -314,7 +272,12 @@ static void adv_update_handler(void)
     err_code = SHTC3_GetTempAndHumiPolling(&temperature, &humidity);
     APP_ERROR_CHECK(err_code);
 
-    uint8_t data_r[17] = "";
+    err_code = SHTC3_Sleep();
+    APP_ERROR_CHECK(err_code);
+
+    uint8_t data_r[17];
+    memset(&data_r, '\0', sizeof(data_r));
+
     int16_t _t = (int16_t)(temperature * 100);
     int16_t _h = (int16_t)(humidity * 100);
 
@@ -326,12 +289,17 @@ static void adv_update_handler(void)
     {
       err_code = sd_ble_gap_adv_stop(m_adv_handle);
       APP_ERROR_CHECK(err_code);
+    }
+    else
+    {
+      isBoot = false;
 
       // Start how long to run interval timer.
       err_code = app_timer_start(m_run_timer_id,
                                APP_TIMER_TICKS(15000),
                                NULL);
       APP_ERROR_CHECK(err_code);
+
     }
 
     // Build and set advertising data
@@ -341,7 +309,7 @@ static void adv_update_handler(void)
     manuf_data.company_identifier = COMPANY_IDENTIFIER;
     manuf_data.data.size          = strlen(data_r);
     manuf_data.data.p_data        = data_r;
-    //advdata.flags                 = flags;
+    advdata.flags                 = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
     advdata.p_manuf_specific_data = &manuf_data;
 
     err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
@@ -354,46 +322,7 @@ static void adv_update_handler(void)
     tx_power_set();
 
     bsp_indication_set(BSP_INDICATE_SENT_OK);
-
-    isBoot = false;
 }
-
-
-/**@brief Function for starting application timers.
- *
- * @details This function will be start two timers - one for the time duration for which
- *          notifications have to be sent to the peer and another for the interval between two
- *          notifications (which is also the connection interval).
- */
-static void application_timers_start(void)
-{
-    ret_code_t err_code;
-
-    // Start connection interval timer.
-    err_code = app_timer_start(m_conn_int_timer_id,
-                               APP_TIMER_TICKS(APP_CFG_CONNECTION_INTERVAL),
-                               NULL);
-    APP_ERROR_CHECK(err_code);
-
-    // Start characteristic notification timer.
-    err_code = app_timer_start(m_notif_timer_id, APP_TIMER_TICKS(5000), NULL);
-    APP_ERROR_CHECK(err_code);
-}
-
-
-/**@brief Function for Stopping application timers.
- */
-static void application_timers_stop(void)
-{
-    ret_code_t err_code;
-
-    err_code = app_timer_stop(m_notif_timer_id);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = app_timer_stop(m_conn_int_timer_id);
-    APP_ERROR_CHECK(err_code);
-}
-
 
 /**@brief Function for starting advertising.
  */
@@ -429,12 +358,13 @@ static void wake_on_RTC(void * p_context)
 
     ret_code_t err_code = nrf_drv_saadc_sample();
     APP_ERROR_CHECK(err_code);
-
+/*
     // Start update interval timer.
     err_code = app_timer_start(m_update_timer_id,
                                APP_TIMER_TICKS(ADC_UPDATE_MS),
                                NULL);
     APP_ERROR_CHECK(err_code);
+    */
 }
 
 
@@ -500,7 +430,6 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         case BLE_GAP_EVT_DISCONNECTED:
             m_conn_handle = BLE_CONN_HANDLE_INVALID;
-            application_timers_stop();
             // Go to system-off mode
             err_code = sd_power_system_off();
             APP_ERROR_CHECK(err_code);
@@ -739,13 +668,13 @@ int main(void)
 
     ret_code_t err_code = nrf_drv_saadc_sample();
     APP_ERROR_CHECK(err_code);
-
+/*
     // Start update interval timer.
     err_code = app_timer_start(m_update_timer_id,
                                APP_TIMER_TICKS(ADC_UPDATE_MS),
                                NULL);
     APP_ERROR_CHECK(err_code);
-
+*/
     // Enter main loop.
     for (;;)
     {

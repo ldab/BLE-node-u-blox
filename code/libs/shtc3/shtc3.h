@@ -56,10 +56,10 @@ static ret_code_t SHTC3_CheckCrc(uint8_t rawData[])
 
   // verify checksum
   if(crc != rawData[2]) {
-    NRF_LOG_WARNING("CRC Failed"); //NRF_LOG_FLUSH();
+    //NRF_LOG_WARNING("CRC Failed"); //NRF_LOG_FLUSH();
     return 2;
   } else {
-    NRF_LOG_INFO("CRC Good"); //NRF_LOG_FLUSH();
+    //NRF_LOG_INFO("CRC Good"); //NRF_LOG_FLUSH();
     return 0;
   }
 }
@@ -95,6 +95,27 @@ static float SHTC3_CalcHumidity(uint16_t rawValue){
 }
 
 /**
+ * @brief Function for Reset SHTC3
+ */
+ret_code_t SHTC3_reset(void)
+{
+    ret_code_t err_code;
+    
+    // WAKEUP
+    uint8_t reg[2] = {0x35, 0x17};
+    err_code = nrf_drv_twi_tx(&m_twi, SHTC3_ADDR, reg, sizeof(reg), false);
+    APP_ERROR_CHECK(err_code);
+
+    // GET ID
+    reg[0] = 0x80;
+    reg[1] = 0x5D;
+    err_code = nrf_drv_twi_tx(&m_twi, SHTC3_ADDR, reg, 2, false);
+    APP_ERROR_CHECK(err_code);
+
+    return err_code;
+}
+
+/**
  * @brief Function for Getting SHTC3 ID
  */
 void SHTC3_getID(void)
@@ -114,7 +135,7 @@ void SHTC3_getID(void)
 
     uint16_t id = 0;
     err_code = SHTC3_Read2BytesAndCrc(&id);
-    NRF_LOG_INFO("ID is = %x", id); //NRF_LOG_FLUSH();
+    //NRF_LOG_INFO("ID is = %x", id); //NRF_LOG_FLUSH();
 }
 
 ret_code_t SHTC3_Sleep(void)
@@ -140,21 +161,26 @@ ret_code_t SHTC3_GetTempAndHumiPolling(float *temp, float *humi)
     err_code = nrf_drv_twi_tx(&m_twi, SHTC3_ADDR, reg, sizeof(reg), false);
     APP_ERROR_CHECK(err_code);
 
+    // TODO remove delay and wait for the bus, or event
+    //wake up time is max 240us
+    nrf_delay_us(250);
+
     // MEAS_T_RH_POLLING  = 0x7866, // meas. read T first, clock stretching disabled
     //uint8_t reg[2] = {0x78, 0x66};
     //MEAS_T_RH_CLOCKSTR = 0x7CA2, // meas. read T first, clock stretching enabled
-    reg[0] = 0x78;
-    reg[1] = 0x66;
+    //MEAS_T_RH_POLLING_LP= 0x609C, // meas. read T first, clock stretching disabled
+    reg[0] = 0x60;
+    reg[1] = 0x9C;
     err_code = nrf_drv_twi_tx(&m_twi, SHTC3_ADDR, reg, sizeof(reg), false);
     APP_ERROR_CHECK(err_code);
 
     // TODO remove delay and wait for the bus, or clock stretching
-    nrf_delay_ms(150);
+    nrf_delay_ms(1);
 
     // if no error, read temperature and humidity raw values
     if(err_code == 0) 
     {
-      //TODO read long way as calling SHTC3_Read2BytesAndCrc didn't work
+      //TODO read long way as calling SHTC3_Read2BytesAndCrc didn't work because we need to read 6 bytes.
       uint8_t rx_data[6];
       err_code = nrf_drv_twi_rx(&m_twi, SHTC3_ADDR, rx_data, sizeof(rx_data));
       APP_ERROR_CHECK(err_code);
@@ -170,7 +196,7 @@ ret_code_t SHTC3_GetTempAndHumiPolling(float *temp, float *humi)
       rawValueHumi = (rx_data[3] << 8) | rx_data[4]; 
     }
 
-    NRF_LOG_INFO("rawTemp = %d, rawHum = %d", rawValueTemp, rawValueHumi); //NRF_LOG_FLUSH();
+    //NRF_LOG_INFO("rawTemp = %d, rawHum = %d", rawValueTemp, rawValueHumi); //NRF_LOG_FLUSH();
 
     // if no error, calculate temperature in degC and humidity in %RH
     if(err_code == 0)
@@ -210,7 +236,7 @@ void LM75B_set_mode(void)
  */
 __STATIC_INLINE void data_handler(uint8_t temp)
 {
-    NRF_LOG_INFO("Temperature: %d Celsius degrees.", temp);
+    //NRF_LOG_INFO("Temperature: %d Celsius degrees.", temp);
 }
 
 /**
@@ -221,20 +247,20 @@ void twi_handler(nrf_drv_twi_evt_t const * p_event, void * p_context)
     switch (p_event->type)
     {
         case NRF_DRV_TWI_EVT_DONE:
-            if (p_event->xfer_desc.type == NRF_DRV_TWI_XFER_RX)
+            /*if (p_event->xfer_desc.type == NRF_DRV_TWI_XFER_RX)
             {
-                data_handler(m_sample);
+                //data_handler(m_sample);
             }
             else if(p_event->xfer_desc.type == NRF_DRV_TWI_XFER_TX)
             {
-            }
+            }*/
             m_xfer_done = true;
             break;
         case NRF_DRV_TWI_EVT_ADDRESS_NACK: ///< Error event: NACK received after sending the address.
-            NRF_LOG_WARNING("NACK received after sending the address ");
+            //NRF_LOG_WARNING("NACK received after sending the address ");
             break;
         case NRF_DRV_TWI_EVT_DATA_NACK:     ///< Error event: NACK received after sending a data byte.
-            NRF_LOG_WARNING("NACK received after sending a data byte ");
+            //NRF_LOG_WARNING("NACK received after sending a data byte ");
             break;
         default:
             break;
