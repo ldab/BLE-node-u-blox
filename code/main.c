@@ -53,7 +53,7 @@
 
 #define APP_ADV_DURATION                0//3000                                       /**< The advertising duration (30 seconds) in units of 10 milliseconds. */
 #define NON_CONNECTABLE_ADV_INTERVAL    MSEC_TO_UNITS(1000, UNIT_0_625_MS)            /**< The advertising interval for non-connectable advertisement (100 ms). This value can vary between 100ms to 10.24s). */
-#define BLE_TX_POWER                    4                                             /**< BLE TX POWER in dBm, values: -40dBm, -20dBm, -16dBm, -12dBm, -8dBm, -4dBm, 0dBm, +2dBm, +3dBm, +4dBm, +5dBm, +6dBm, +7dBm and +8dBm. */
+#define BLE_TX_POWER                    8                                             /**< BLE TX POWER in dBm, values: -40dBm, -20dBm, -16dBm, -12dBm, -8dBm, -4dBm, 0dBm, +2dBm, +3dBm, +4dBm, +5dBm, +6dBm, +7dBm and +8dBm. */
 
 #define SLAVE_LATENCY                   0                                             /**< Slave latency. */
 #define CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)               /**< Connection supervisory timeout (4 seconds). */
@@ -68,6 +68,8 @@
 #define ADC_RES_14BIT                   16384                                   /**< Maximum digital value for 14-bit ADC conversion. */                                
 
 #define DEEP_SLEEP_RTC_MS               60000
+
+#define ADV_ADDL_MANUF_DATA_LEN         ( 31 - 7 )                              /**< APP_CFG_ADV_DATA_LEN - ( ADV_ENCODED_FLAGS_LEN + ADV_ENCODED_AD_TYPE_LEN + ADV_ENCODED_AD_TYPE_LEN_LEN + ADV_ENCODED_COMPANY_ID_LEN ) */
 
 /**@brief Macro to convert the result of ADC conversion in millivolts.
  *
@@ -206,7 +208,6 @@ static void qwr_init(void)
  *
  * @details This function initializes the advertisement parameters to values that will put
  *          the application in non-connectable mode.
- *
  */
 static void non_connectable_adv_init(void)
 {
@@ -219,29 +220,6 @@ static void non_connectable_adv_init(void)
     m_adv_params.filter_policy   = BLE_GAP_ADV_FP_ANY;
     m_adv_params.interval        = NON_CONNECTABLE_ADV_INTERVAL;
     m_adv_params.primary_phy     = BLE_GAP_PHY_1MBPS;
-}
-
-/**@brief Function for handling the Notification timeout.
- *
- * @details This function will be called when the notification timer expires. This will stop the
- *          timer for connection interval and disconnect from the peer.
- *
- * @param[in]   p_context   Pointer used for passing some arbitrary information (context) from the
- *                          app_start_timer() call to the timeout handler.
- */
-static void notif_timeout_handler(void * p_context)
-{
-    ret_code_t err_code;
-
-    UNUSED_PARAMETER(p_context);
-
-    // Stop all notifications (by stopping the timer for connection interval that triggers
-    // notifications and disconnecting from peer).
-    err_code = app_timer_stop(m_conn_int_timer_id);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-    APP_ERROR_CHECK(err_code);
 }
 
 /**@brief Function for changing the tx power.
@@ -275,16 +253,16 @@ static void adv_update_handler(void)
     err_code = SHTC3_Sleep();
     APP_ERROR_CHECK(err_code);
 
-    uint8_t data_r[17];
+    uint8_t data_r[ ADV_ADDL_MANUF_DATA_LEN ];
     memset(&data_r, '\0', sizeof(data_r));
 
     int16_t _t = (int16_t)(temperature * 100);
     int16_t _h = (int16_t)(humidity * 100);
 
-    NRF_LOG_INFO("TEMP = %d", _t);
-
     sprintf(data_r, "%d@%d@%d", _t, _h, percentage_batt_lvl);      //Factor x100 -> Temp followed by Hum by Batt -10000@10000@300
     
+    NRF_LOG_INFO("%s", data_r);    
+
     if( isBoot == false )
     {
       err_code = sd_ble_gap_adv_stop(m_adv_handle);
@@ -302,14 +280,15 @@ static void adv_update_handler(void)
 
     }
 
+    non_connectable_adv_init();
+
     // Build and set advertising data
     memset(&advdata, 0, sizeof(advdata));
 
     ble_advdata_manuf_data_t      manuf_data;
     manuf_data.company_identifier = COMPANY_IDENTIFIER;
-    manuf_data.data.size          = strlen(data_r);
+    manuf_data.data.size          = ADV_ADDL_MANUF_DATA_LEN;
     manuf_data.data.p_data        = data_r;
-    advdata.flags                 = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
     advdata.p_manuf_specific_data = &manuf_data;
 
     err_code = ble_advdata_encode(&advdata, m_adv_data.adv_data.p_data, &m_adv_data.adv_data.len);
@@ -602,6 +581,8 @@ static void sleep_mode_enter(void * p_context)
     // Prepare wakeup buttons.
     err_code = bsp_btn_ble_sleep_mode_prepare();
     APP_ERROR_CHECK(err_code);
+
+    //sd_power_system_off();
 }
 
 /**@brief Function for configuring ADC to do battery level conversion.
@@ -663,8 +644,6 @@ int main(void)
     gap_params_init();
     gatt_init();
     qwr_init();
-
-    non_connectable_adv_init();
 
     ret_code_t err_code = nrf_drv_saadc_sample();
     APP_ERROR_CHECK(err_code);

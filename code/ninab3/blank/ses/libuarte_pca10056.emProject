@@ -30,7 +30,7 @@
       linker_section_placement_file="flash_placement.xml"
       linker_section_placement_macros="FLASH_PH_START=0x0;FLASH_PH_SIZE=0x100000;RAM_PH_START=0x20000000;RAM_PH_SIZE=0x40000;FLASH_START=0x27000;FLASH_SIZE=0xd9000;RAM_START=0x20002260;RAM_SIZE=0x3dda0"
       linker_section_placements_segments="FLASH RX 0x0 0x100000;RAM RWX 0x20000000 0x40000"
-      macros="SDK=C:/Users/lbisp/Desktop/nRF5_SDK_16.0.0_98a08e2;CMSIS_CONFIG_TOOL=$(SDK)/external_tools/cmsisconfig/CMSIS_Configuration_Wizard.jar"
+      macros="SDK=C:\\Users\\lbisp\\Desktop\\SDK DO NOT CHANGE;CMSIS_CONFIG_TOOL=$(SDK)/external_tools/cmsisconfig/CMSIS_Configuration_Wizard.jar"
       project_directory=""
       project_type="Executable" />
     <folder Name="Segger Startup Files">

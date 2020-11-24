@@ -15,12 +15,14 @@ u-blox NINA-B3 BLE node, based on nRF52840 and SHTC3
 
 ## Energy Budget
 
-* 5mA active current;
+* ?? mA active current;
 * Wakes every hour;
-* 4uA Sleep current;
+* 17uA Sleep current;
 * CR2032 ~235mAh;
 
-**Battery life = ???**
+**Battery life =**
+
+<img src="./pics/ble_graph_battery.png" alt="Board Schematic" width="60%"> 
 
 ## Nordic SDK
 

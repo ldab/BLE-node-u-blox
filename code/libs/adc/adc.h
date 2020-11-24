@@ -66,64 +66,15 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-#define SAMPLES_IN_BUFFER 5
+#define SAMPLES_IN_BUFFER 1
 volatile uint8_t state = 1;
 
 static const nrf_drv_timer_t m_timer = NRF_DRV_TIMER_INSTANCE(0);
-static nrf_saadc_value_t     m_buffer_pool[2][SAMPLES_IN_BUFFER];
+static nrf_saadc_value_t     m_buffer_pool[SAMPLES_IN_BUFFER];
 static nrf_ppi_channel_t     m_ppi_channel;
 static uint32_t              m_adc_evt_counter;
 
-
-void timer_handler(nrf_timer_event_t event_type, void * p_context)
-{
-
-}
-
-
-void saadc_sampling_event_init(void)
-{
-    ret_code_t err_code;
-
-    err_code = nrf_drv_ppi_init();
-    APP_ERROR_CHECK(err_code);
-
-    nrf_drv_timer_config_t timer_cfg = NRF_DRV_TIMER_DEFAULT_CONFIG;
-    timer_cfg.bit_width = NRF_TIMER_BIT_WIDTH_32;
-    err_code = nrf_drv_timer_init(&m_timer, &timer_cfg, timer_handler);
-    APP_ERROR_CHECK(err_code);
-
-    /* setup m_timer for compare event every 400ms */
-    uint32_t ticks = nrf_drv_timer_ms_to_ticks(&m_timer, 400);
-    nrf_drv_timer_extended_compare(&m_timer,
-                                   NRF_TIMER_CC_CHANNEL0,
-                                   ticks,
-                                   NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK,
-                                   false);
-    nrf_drv_timer_enable(&m_timer);
-
-    uint32_t timer_compare_event_addr = nrf_drv_timer_compare_event_address_get(&m_timer,
-                                                                                NRF_TIMER_CC_CHANNEL0);
-    uint32_t saadc_sample_task_addr   = nrf_drv_saadc_sample_task_get();
-
-    /* setup ppi channel so that timer compare event is triggering sample task in SAADC */
-    err_code = nrf_drv_ppi_channel_alloc(&m_ppi_channel);
-    APP_ERROR_CHECK(err_code);
-
-    err_code = nrf_drv_ppi_channel_assign(m_ppi_channel,
-                                          timer_compare_event_addr,
-                                          saadc_sample_task_addr);
-    APP_ERROR_CHECK(err_code);
-}
-
-
-void saadc_sampling_event_enable(void)
-{
-    ret_code_t err_code = nrf_drv_ppi_channel_enable(m_ppi_channel);
-
-    APP_ERROR_CHECK(err_code);
-}
-
+uint16_t battRaw = 0;
 
 void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 {
@@ -139,7 +90,8 @@ void saadc_callback(nrf_drv_saadc_evt_t const * p_event)
 
         for (i = 0; i < SAMPLES_IN_BUFFER; i++)
         {
-            NRF_LOG_INFO("%d", p_event->data.done.p_buffer[i]);
+            battRaw = p_event->data.done.p_buffer[i];
+            NRF_LOG_INFO("%d", battRaw);
         }
         m_adc_evt_counter++;
     }
@@ -150,7 +102,18 @@ void saadc_init(void)
 {
     ret_code_t err_code;
     nrf_saadc_channel_config_t channel_config =
-        NRF_DRV_SAADC_DEFAULT_CHANNEL_CONFIG_SE(NRF_SAADC_INPUT_AIN0);
+        //NRF_DRV_SAADC_DEFAULT_CHANNEL_CONFIG_SE(NRF_SAADC_INPUT_AIN2);
+        {
+          .resistor_p = NRF_SAADC_RESISTOR_DISABLED,
+          .resistor_n = NRF_SAADC_RESISTOR_DISABLED,
+          .gain       = NRF_SAADC_GAIN1_4,
+          .reference  = NRF_SAADC_REFERENCE_INTERNAL,
+          .acq_time   = NRF_SAADC_ACQTIME_40US,
+          .mode       = NRF_SAADC_MODE_SINGLE_ENDED,
+          .burst      = NRF_SAADC_BURST_DISABLED,
+          .pin_p      = (nrf_saadc_input_t)(NRF_SAADC_INPUT_AIN2),
+          .pin_n      = NRF_SAADC_INPUT_DISABLED
+      };
 
     err_code = nrf_drv_saadc_init(NULL, saadc_callback);
     APP_ERROR_CHECK(err_code);
@@ -158,12 +121,34 @@ void saadc_init(void)
     err_code = nrf_drv_saadc_channel_init(0, &channel_config);
     APP_ERROR_CHECK(err_code);
 
-    err_code = nrf_drv_saadc_buffer_convert(m_buffer_pool[0], SAMPLES_IN_BUFFER);
+    err_code = nrf_drv_saadc_buffer_convert(m_buffer_pool, SAMPLES_IN_BUFFER);
     APP_ERROR_CHECK(err_code);
+}
 
-    err_code = nrf_drv_saadc_buffer_convert(m_buffer_pool[1], SAMPLES_IN_BUFFER);
-    APP_ERROR_CHECK(err_code);
+float saadc_getFloat()
+{
+  uint8_t i = 0;
+  uint16_t _battRaw = 0;
 
+  while(i < 5)
+  {
+    nrf_drv_saadc_sample();
+    nrf_delay_ms(500);
+    _battRaw += battRaw;
+    i++;
+  }
+
+  NRF_LOG_INFO("battRaw = %d, i = %d", _battRaw, i);NRF_LOG_FLUSH();
+
+  _battRaw /= (i);
+
+  // Convert the result to voltage
+  // CHECK SAADC_CONFIG_RESOLUTION @ sdk_config.h
+  // Result = [V(p) - V(n)] * GAIN/REFERENCE * 2^(RESOLUTION)
+  // Result = (VDD - 0) * ((1/4) / 0.6) * 2^14
+  // ADC_RESULT_IN_MILLI_VOLTS(ADC_VALUE)      ((((ADC_VALUE) * ADC_REF_VOLTAGE_IN_MILLIVOLTS) / 16384) * 4)
+  
+  return (float)(((_battRaw * 600) / 16384) * 4) * 2 / 1000.0f;
 }
 
 
@@ -181,9 +166,11 @@ int main(void)
     APP_ERROR_CHECK(ret_code);
 
     saadc_init();
-    saadc_sampling_event_init();
-    saadc_sampling_event_enable();
     NRF_LOG_INFO("SAADC HAL simple example started.");
+
+    float batt = saadc_getFloat();
+
+    NRF_LOG_INFO("battRaw = %d float = " NRF_LOG_FLOAT_MARKER, battRaw, NRF_LOG_FLOAT(batt));NRF_LOG_FLUSH();
 
     while (1)
     {
