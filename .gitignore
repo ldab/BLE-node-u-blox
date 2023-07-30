@@ -39,3 +39,11 @@ fp-info-cache
 
 PCB/fp-lib-table
 PCB/BLE-node.xml
+
+# editors
+*.swp
+*~
+
+# build
+*/build*/
+build/
